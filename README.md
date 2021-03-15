@@ -1,0 +1,1 @@
+# notarize_macos_app
