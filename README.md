@@ -7,6 +7,8 @@
 [Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
 [more help](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/)
 
+If you don't want to do it youself, you can use [tools](https://github.com/electron/electron-notarize).
+
 ### Why?
 
 > Beginning in macOS 10.15, all software built after June 1, 2019, and distributed with Developer ID must be notarized.
@@ -60,12 +62,9 @@ xcrun altool --notarization-info "Your-Request-UUID" \
              --password "@keychain:Developer-altool"   
 ```
 
-
 ### Remove apple's Security attribute on app ( BAD CHOICE )
 
 `xattr -d com.apple.quarantine`
-
-
 
 ### Recovering from a failed log
 
@@ -124,4 +123,24 @@ pkgbuild --root ~/test-dir \
            --install-location "/" \
            --sign <Developer ID Installer> \
            foo-cli.zip
+
+// check full Cert Chain
+pkgutil --check-signature foo-cli.zip
+
+spctl -vvv --assess --type exec test-dir/foo-cli 
+test-dir/foo-cli: rejected
+
+source=Unnotarized Developer ID
+origin=Developer ID Application: <Developer + Team ID>
+
+
+xcrun altool --notarization-info "xxxx" \
+             --username ""username@example.com" \
+             --password "@keychain:Developer-altool" 
+             --output-format json
+
 ```
+
+##### Result
+
+>ITMS-90728: Invalid File Contents - The contents of the file foo-cli.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
