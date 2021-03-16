@@ -1,19 +1,21 @@
-# notarize_macos_app
+# Notarize a macOS app
+
+## Why?
+
+Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_macos_software_before_distribution/:
+):
+> Beginning in macOS 10.15, all software built after June 1, 2019, and distributed with Developer ID must be notarized.
+
+> Enabling the ‘Hardened Runtime’ will be requirement for successful notarization starting January 2020.
 
 ### What you need
 
-[two certs; one for binary and one for zip package](https://developer.apple.com)
-[App-specific-passwords](https://appleid.apple.com/)
+- 2 x `Code Signing certificates` from <https://developer.apple.com>
+- 1 x `App-specific-passwords` from <https://appleid.apple.com/>
 [Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
-[more help](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/)
+- Manual step-by-step [here](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/)
+- Automated [tool](https://github.com/electron/electron-notarize)
 
-If you don't want to do it youself, you can use [tools](https://github.com/electron/electron-notarize).
-
-### Why?
-
-> Beginning in macOS 10.15, all software built after June 1, 2019, and distributed with Developer ID must be notarized.
-
-> Enabling the ‘Hardened Runtime’ will compile the binary in a way that makes it harder for external process to inject code. This will be requirement for successful notarization starting January 2020.
 
 ### Verify the binary
 
