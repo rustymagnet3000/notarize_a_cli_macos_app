@@ -16,7 +16,6 @@ Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_maco
 - Manual step-by-step [here](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/)
 - Automated [tool](https://github.com/electron/electron-notarize)
 
-
 ### Verify the binary
 
 #### Verify against apple system controls
@@ -53,7 +52,7 @@ xcrun altool --notarize-app \
              --username "username@example.com" \
              --password "@keychain:Developer-altool" \
              --asc-provider "ABCD123456" \
-             --file "build/hello-1.0.pkg"
+             --file foo-cli.zip
 ```
 
 ### check status
@@ -68,7 +67,9 @@ xcrun altool --notarization-info "Your-Request-UUID" \
 
 `xattr -d com.apple.quarantine`
 
-### Recovering from a failed log
+### Result from submission 1
+
+I had forgotten to sign the zip package.
 
 ```json
 {
@@ -110,10 +111,13 @@ xcrun altool --notarization-info "Your-Request-UUID" \
 }
 ```
 
-### Fixing issue
+### Fix submission 1
 
 ```bash
-codesign --force --options runtime --timestamp --sign <Developer ID> ${FOO_APP}
+export APP_DEV_ID=<Developer ID Application>
+export PKG_DEV_ID=<Developer ID Installer>
+
+codesign --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
 codesign --verify ${FOO_APP} --verbose
 
 foo-cli: valid on disk
@@ -123,14 +127,21 @@ pkgbuild --root ~/test-dir \
            --identifier "com.rusty.foo-cli" \
            --version "1.0" \
            --install-location "/" \
-           --sign <Developer ID Installer> \
+           --sign ${PKG_DEV_ID} \
            foo-cli.zip
+
+xcrun altool --notarize-app \
+             --primary-bundle-id "com.example.com" \
+             --username "username@example.com" \
+             --password "@keychain:Developer-altool" \
+             --asc-provider "ABCD123456" \
+             --file foo-cli.zip
 
 // check full Cert Chain
 pkgutil --check-signature foo-cli.zip
 
-spctl -vvv --assess --type exec test-dir/foo-cli 
-test-dir/foo-cli: rejected
+spctl -vvv --assess --type exec ${FOO_APP}
+foo-cli: rejected
 
 source=Unnotarized Developer ID
 origin=Developer ID Application: <Developer + Team ID>
@@ -143,6 +154,34 @@ xcrun altool --notarization-info "xxxx" \
 
 ```
 
-##### Result
+### Result from submission 2
 
 >ITMS-90728: Invalid File Contents - The contents of the file foo-cli.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
+
+### Fix submission 2
+
+<https://github.com/electron/electron-notarize> suggests I needed to add some `entitlements`:
+
+```plist
+    com.apple.security.cs.allow-jit
+    com.apple.security.cs.allow-unsigned-executable-memory
+```
+
+#### Add entitlements
+
+Create an empty app and add the entitlements required.  Copy that entitlements file.
+
+```bash
+codesign --entitlements cli_empty_macos.entitlements --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
+
+foo-cli: valid on disk
+foo-cli: satisfies its Designated Requirement
+```
+
+#### Check local system
+
+```bash
+spctl -vvv --assess --type exec ${FOO_APP}
+source=Unnotarized Developer ID
+origin=Developer ID Application: <Developer + Team ID>
+```
