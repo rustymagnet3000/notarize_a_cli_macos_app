@@ -27,9 +27,13 @@ Download and install into `keyChain`.
 
 #### List the code signing certificate from KeyChain
 
-Note the 40 character identifiers for the downloaded certificates.  You don't need the string.
+```bash
+security find-identity -p basic -v            
+  5) 629......005A5 "Developer ID Installer: Mickey Mouse (U8.......)"
+  6) 79F......C0126 "Developer ID Application: Mickey Mouse  (U8.......)"
+```
 
-`security find-identity -p basic -v`
+Copy the 40 character identifiers for the downloaded certificates.  Also note the Team ID. The Team ID ( `U8...`) is a 10 character GUID.
 
 ### Set environment variables
 
@@ -37,92 +41,90 @@ Note the 40 character identifiers for the downloaded certificates.  You don't ne
 export APP_DEV_ID=<Developer ID Application>
 export PKG_DEV_ID=<Developer ID Installer>
 export BUNDLE_ID="com.rusty.notarizetest"
+export INSTALL_LOC="/usr/local/bin/foo-cli"
 export APPLE_USERNAME=<email>
+export TEAM_ID=<>
 export FOO_APP="foo"
 export FOO_PKG=${FOO_APP}.pkg
 ```
 
-### Verify the binary
+### Verify Notarization is required
 
-#### Verify against apple system controls
+If any of the following fail, you need to `notarize`.
 
 ```bash
+codesign --verify ${FOO_APP} --verbose
 spctl --assess --verbose ${FOO_APP}
 spctl -a -v --raw ${FOO_APP}
 ```
 
-#### Verify code signature
+### Add entitlements
 
-`codesign --verify ${FOO_APP} --verbose`
+Create an empty `macOS command line` app and add the entitlements required.  Copy that entitlements file.  <https://github.com/electron/electron-notarize> suggests you needd some `entitlements`:
 
-
-#### Read certificate ( if outside of KeyChain )
-
-`openssl x509 -inform der -in ~/development.cer -noout -text`
-
-### Code sign
-
-```bash
-codesign -dvv ${FOO_APP}
-codesign --force --verify --verbose --sign < developer ID > ${FOO_APP} --entitlements cli_empty_macos.entitlements
+```plist
+    com.apple.security.cs.allow-jit
+    com.apple.security.cs.allow-unsigned-executable-memory
 ```
 
-### uploade zip to Apple’s Notarization Servers
+### Sign the binary with Entitlements + App Hardening
+
+The `runtime` flag is required for the `notarization` to pass.  
 
 ```bash
-xcrun altool --notarize-app \
-             --primary-bundle-id "com.example.com" \
-             --username "username@example.com" \
+codesign --entitlements cli_empty_macos.entitlements --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
+
+foo-cli: valid on disk
+foo-cli: satisfies its Designated Requirement
+```
+
+### Add the code into a Package file
+
+```bash
+pkgbuild --root ~/test-dir \
+           --identifier ${BUNDLE_ID} \
+           --version "1.0" \
+           --install-location ${INSTALL_LOC} \
+           --sign ${PKG_DEV_ID} \
+           ${FOO_PKG}
+```
+
+### Verify package was signed correctly
+
+`pkgutil --check-signature ${FOO_PKG}`
+
+### Verify package was signed correctly
+
+The following always fails, even when `notarized`:
+
+```bash
+spctl -vvv --assess --type exec ${FOO_PKG}
+foo: rejected
+```
+
+### Submit for notarization
+
+```bash
+xcrun altool --notarize-app \                 
+             --primary-bundle-id ${BUNDLE_ID} \
+             --username ${APPLE_USERNAME} \
              --password "@keychain:Developer-altool" \
-             --asc-provider "ABCD123456" \
-             --file foo-cli.zip
+             --asc-provider "U8MSEX235L" \
+             --file foo-cli1.0.pkg
 ```
 
 ### check status
 
 ```bash
 xcrun altool --notarization-info "Your-Request-UUID" \
-             --username "username@example.com" \                                    
+             --username ${APPLE_USERNAME} \                                    
              --password "@keychain:Developer-altool"   
 ```
-
-### Fix submission 1
-
-
-codesign --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
-codesign --verify ${FOO_APP} --verbose
-
-foo: valid on disk
-foo: satisfies its Designated Requirement
-
-pkgbuild --root ~/test-dir \
-           --identifier ${BUNDLE_ID} \
-           --version "1.0" \
-           --install-location "/" \
-           --sign ${PKG_DEV_ID} \
-           foo.zip
-
-xcrun altool --notarize-app \
-             --primary-bundle-id ${BUNDLE_ID} \
-             --username ${APPLE_USERNAME} \
-             --password "@keychain:Developer-altool" \
-             --asc-provider "ABCD123456" \
-             --file foo.zip
-
-// check full Cert Chain
-pkgutil --check-signature foo.zip
-
-spctl -vvv --assess --type exec ${FOO_APP}
-foo: rejected
 
 source=Unnotarized Developer ID
 origin=Developer ID Application: <Developer + Team ID>
 
 
-xcrun altool --notarization-info "xxxx" \
-             --username ""username@example.com" \
-             --password "@keychain:Developer-altool" 
-             --output-format json
 
 ```
 
@@ -132,23 +134,9 @@ xcrun altool --notarization-info "xxxx" \
 
 ### Fix submission 2
 
-<https://github.com/electron/electron-notarize> suggests I needed to add some `entitlements`:
 
-```plist
-    com.apple.security.cs.allow-jit
-    com.apple.security.cs.allow-unsigned-executable-memory
-```
 
-#### Add entitlements
 
-Create an empty app and add the entitlements required.  Copy that entitlements file.
-
-```bash
-codesign --entitlements cli_empty_macos.entitlements --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
-
-foo-cli: valid on disk
-foo-cli: satisfies its Designated Requirement
-```
 
 #### Check local system
 
@@ -166,14 +154,7 @@ The same error.
 
 ### Submission 4
 
-```bash
-pkgbuild --root ~/test-dir \
-           --identifier ${BUNDLE_ID} \
-           --version "1.0" \
-           --install-location "/" \
-           --sign ${PKG_DEV_ID} \
-           ${FOO_APP}1.0.pkg
-```
+
 
 ### Verify success
 
