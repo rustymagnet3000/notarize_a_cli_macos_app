@@ -116,6 +116,8 @@ I had forgotten to sign the zip package.
 ```bash
 export APP_DEV_ID=<Developer ID Application>
 export PKG_DEV_ID=<Developer ID Installer>
+export BUNDLE_ID="com.rusty.notarizetest"
+export APPLE_USERNAME=<email>
 
 codesign --force --options runtime --timestamp --sign ${APP_DEV_ID} ${FOO_APP}
 codesign --verify ${FOO_APP} --verbose
@@ -124,15 +126,15 @@ foo-cli: valid on disk
 foo-cli: satisfies its Designated Requirement
 
 pkgbuild --root ~/test-dir \
-           --identifier "com.rusty.foo-cli" \
+           --identifier ${BUNDLE_ID} \
            --version "1.0" \
            --install-location "/" \
            --sign ${PKG_DEV_ID} \
            foo-cli.zip
 
 xcrun altool --notarize-app \
-             --primary-bundle-id "com.example.com" \
-             --username "username@example.com" \
+             --primary-bundle-id ${BUNDLE_ID} \
+             --username ${APPLE_USERNAME} \
              --password "@keychain:Developer-altool" \
              --asc-provider "ABCD123456" \
              --file foo-cli.zip
@@ -184,4 +186,37 @@ foo-cli: satisfies its Designated Requirement
 spctl -vvv --assess --type exec ${FOO_APP}
 source=Unnotarized Developer ID
 origin=Developer ID Application: <Developer + Team ID>
+```
+
+### Result from submission 3
+
+The same error.
+
+>ITMS-90728: Invalid File Contents - The contents of the file foo-cli.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
+
+### Submission 4
+
+```bash
+pkgbuild --root ~/test-dir \
+           --identifier ${BUNDLE_ID} \
+           --version "1.0" \
+           --install-location "/" \
+           --sign ${PKG_DEV_ID} \
+           ${FOO_APP}1.0.pkg
+```
+
+### Verify success
+
+```bash
+xcrun altool --list-apps \
+             --username ${APPLE_USERNAME} \
+             --password "@keychain:Developer-altool"
+```
+
+### Final step - staple the ticket to package
+
+```bash
+xcrun stapler staple foo-cli1.0.pkg                   
+Processing: foo-cli1.0.pkg
+The staple and validate action worked!
 ```
