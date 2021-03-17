@@ -8,24 +8,33 @@ Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_maco
 
 > Enabling the ‘Hardened Runtime’ will be requirement for successful notarization starting January 2020.
 
-### What you need
+## What you need
 
 - 2 x `Code Signing certificates` from <https://developer.apple.com>
 - 1 x `App-specific-passwords` from <https://appleid.apple.com/>
 [Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
-- Manual step-by-step [here](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/)
-- Automated [tool](https://github.com/electron/electron-notarize)
+- Manual step-by-step [here](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/) or automated [tool](https://github.com/electron/electron-notarize)
 
-#### Get Certificates from Apple Developer account
+### Get Certificates from Apple Developer account
 
-Get two signing certificates from <https://developer.apple.com>.
+From <https://developer.apple.com>:
 
-- Get a `Developer ID Application` for signing the binary
-- Get a `Developer ID Installer` for signing the package [that contains the binary].
+- Create a `Developer ID Application` for signing the binary
+- Create a `Developer ID Installer` for signing the package [that contains the binary].
 
 Download and install into `keyChain`.
 
-#### List the code signing certificate from KeyChain
+### Get a new application specific password in Apple ID portal 
+
+From <https://appleid.apple.com/> request an `app-specific password`.  
+
+Create a `New Password Item` in `Keychain` with the following fields:
+
+- `Keychain Item Name` Developer-altool
+- `Account Name` apple developer account email
+- `Password` the new application-specific password
+
+### List the code signing certificate from KeyChain
 
 ```bash
 security find-identity -p basic -v            
@@ -41,7 +50,7 @@ Copy the 40 character identifiers for the downloaded certificates.  Also note th
 export APP_DEV_ID=<Developer ID Application>
 export PKG_DEV_ID=<Developer ID Installer>
 export BUNDLE_ID="com.rusty.notarizetest"
-export INSTALL_LOC="/usr/local/bin/foo-cli"
+export INSTALL_LOC="/usr/local/bin"
 export APPLE_USERNAME=<email>
 export TEAM_ID=<>
 export FOO_APP="foo"
@@ -81,7 +90,7 @@ foo-cli: satisfies its Designated Requirement
 ### Add the code into a Package file
 
 ```bash
-pkgbuild --root ~/test-dir \
+pkgbuild --root ~/src \
            --identifier ${BUNDLE_ID} \
            --version "1.0" \
            --install-location ${INSTALL_LOC} \
@@ -93,7 +102,7 @@ pkgbuild --root ~/test-dir \
 
 `pkgutil --check-signature ${FOO_PKG}`
 
-### Verify package was signed correctly
+### Verify package against macOS Kernal policies
 
 The following always fails, even when `notarized`:
 
@@ -105,82 +114,42 @@ foo: rejected
 ### Submit for notarization
 
 ```bash
-xcrun altool --notarize-app \                 
+xcrun altool --notarize-app \
              --primary-bundle-id ${BUNDLE_ID} \
              --username ${APPLE_USERNAME} \
              --password "@keychain:Developer-altool" \
-             --asc-provider "U8MSEX235L" \
-             --file foo-cli1.0.pkg
+             --asc-provider ${TEAM_ID} \
+             --file ${FOO_PKG}
 ```
+
+Check the Apple response and `export REQUEST_ID=<big long string>`.
 
 ### check status
 
 ```bash
-xcrun altool --notarization-info "Your-Request-UUID" \
-             --username ${APPLE_USERNAME} \                                    
-             --password "@keychain:Developer-altool"   
-```
-
-source=Unnotarized Developer ID
-origin=Developer ID Application: <Developer + Team ID>
-
-
-
-```
-
-### Result from submission 2
-
->ITMS-90728: Invalid File Contents - The contents of the file foo.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
-
-### Fix submission 2
-
-
-
-
-
-#### Check local system
-
-```bash
-spctl -vvv --assess --type exec ${FOO_APP}
-source=Unnotarized Developer ID
-origin=Developer ID Application: <Developer + Team ID>
-```
-
-### Result from submission 3
-
-The same error.
-
->ITMS-90728: Invalid File Contents - The contents of the file foo-cli.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
-
-### Submission 4
-
-
-
-### Verify success
-
-```bash
-xcrun altool --list-apps \
+xcrun altool --notarization-info ${REQUEST_ID} \
              --username ${APPLE_USERNAME} \
-             --password "@keychain:Developer-altool"
+             --password "@keychain:Developer-altool"   
 ```
 
 ### Final step - staple the ticket to package
 
+After a success email, you can staple the `notarization` to the package:
+
 ```bash
-xcrun stapler staple foo-cli1.0.pkg                   
+xcrun stapler staple ${FOO_PKG}
+
 Processing: foo-cli1.0.pkg
 The staple and validate action worked!
 ```
 
+### Hurdles
 
+When I tried a `zip` file, I would constantly hit the following error.  I moved to `pkg` and no error:
 
-### Remove apple's Security attribute on app ( BAD CHOICE )
+>ITMS-90728: Invalid File Contents - The contents of the file foo.zip do not match the extension. Verify that the contents of the file are valid for the extension and upload again.
 
-`xattr -d com.apple.quarantine`
-
-### Result from submission 1
-
-I had forgotten to sign the zip package.
+The following error file was down to missing the `pkgbuild` step [ which signs the package or zip ]:
 
 ```json
 {
@@ -221,3 +190,9 @@ I had forgotten to sign the zip package.
   ]
 }
 ```
+
+### Remove apple's Security attribute on app
+
+You don't have to do any of this.  But this is not a pro choice, if the command line tool is going beyond your control:
+
+`xattr -d com.apple.quarantine`
