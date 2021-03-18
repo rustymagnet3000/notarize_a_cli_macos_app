@@ -12,8 +12,9 @@ Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_maco
 
 - 2 x `Code Signing certificates` from <https://developer.apple.com>
 - 1 x `App-specific-passwords` from <https://appleid.apple.com/>
-[Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
-- Manual step-by-step [here](https://eclecticlight.co/2019/06/13/building-and-delivering-command-tools-for-catalina/) or automated [tool](https://github.com/electron/electron-notarize)
+- 1 x `Certificate Signing Request` from `KeyChain`
+- [Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
+ or [automated tool](https://github.com/electron/electron-notarize)
 
 ### Get Certificates from Apple Developer account
 
@@ -21,10 +22,23 @@ From <https://developer.apple.com>:
 
 - Create a `Developer ID Application` for signing the binary
 - Create a `Developer ID Installer` for signing the package [that contains the binary].
+- Sign the same `Certificate Signing Request`
 
 Download and install into `keyChain`.
 
-### Get a new application specific password in Apple ID portal 
+#### Select Certificate+ from developer.apple.com
+
+￼![apple_dev_add_cert](.readme/add_cert_apple_dev.png)
+
+#### Create two certificates
+
+![two_certs_to_create](.readme/two_certs_to_create.png)
+
+#### Sign the Request
+
+![csr_on_apple_dev](.readme/csr_on_apple_dev.png)
+
+### Get a new application specific password in Apple ID portal
 
 From <https://appleid.apple.com/> request an `app-specific password`.  
 
@@ -57,21 +71,15 @@ export FOO_APP="foo"
 export FOO_PKG=${FOO_APP}.pkg
 ```
 
-### Verify Notarization is required
+### Verify whether the app is code signed
 
-If any of the following fail, you need to `notarize`.
-
-```bash
-codesign --verify ${FOO_APP} --verbose
-spctl --assess --verbose ${FOO_APP}
-spctl -a -v --raw ${FOO_APP}
-```
+`codesign --verify ${FOO_APP} --verbose`
 
 ### Add entitlements
 
 Create an empty `macOS command line` app and add the entitlements required.  Copy that entitlements file.  <https://github.com/electron/electron-notarize> suggests you needd some `entitlements`:
 
-```plist
+```js
     com.apple.security.cs.allow-jit
     com.apple.security.cs.allow-unsigned-executable-memory
 ```
@@ -101,15 +109,6 @@ pkgbuild --root ~/src \
 ### Verify package was signed correctly
 
 `pkgutil --check-signature ${FOO_PKG}`
-
-### Verify package against macOS Kernal policies
-
-The following always fails, even when `notarized`:
-
-```bash
-spctl -vvv --assess --type exec ${FOO_PKG}
-foo: rejected
-```
 
 ### Submit for notarization
 
