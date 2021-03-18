@@ -18,7 +18,7 @@ Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_maco
 
 ### Get Certificates from Apple Developer account
 
-From <https://developer.apple.com>:
+From a paid developer account or Enterprise account on <https://developer.apple.com>:
 
 - Create a `Developer ID Application` for signing the binary
 - Create a `Developer ID Installer` for signing the package [that contains the binary].
@@ -26,7 +26,11 @@ From <https://developer.apple.com>:
 
 Download and install into `keyChain`.
 
-#### Select Certificate+ from developer.apple.com
+#### Request a Certificate From a Certificate Authority
+
+![create_create_from_ca](.readme/create_create_from_ca.png)
+
+#### Login to developer.apple.com
 
 ￼![apple_dev_add_cert](.readme/add_cert_apple_dev.png)
 
@@ -34,15 +38,13 @@ Download and install into `keyChain`.
 
 ![two_certs_to_create](.readme/two_certs_to_create.png)
 
-#### Sign the Request
+#### Sign each Certificate with the Certificate Signing Request
 
 ![csr_on_apple_dev](.readme/csr_on_apple_dev.png)
 
-### Get a new application specific password in Apple ID portal
+### Login to appleid.apple.com
 
-From <https://appleid.apple.com/> request an `app-specific password`.  
-
-Create a `New Password Item` in `Keychain` with the following fields:
+Request an `app-specific password`.  Copy the value into `KeyChain`.  Create a `New Password Item` in `Keychain` with the following fields:
 
 - `Keychain Item Name` Developer-altool
 - `Account Name` apple developer account email
