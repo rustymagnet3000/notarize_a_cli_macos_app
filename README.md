@@ -1,4 +1,4 @@
-# Notarize a macOS app
+# Notarize and Package a command-line app on macOS app
 
 ## Why?
 
@@ -16,7 +16,9 @@ Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_maco
 - [Help to notarize](https://scriptingosx.com/2019/09/notarize-a-command-line-tool/)
  or [automated tool](https://github.com/electron/electron-notarize)
 
-### Get Certificates from Apple Developer account
+## Prepare to Notarize
+
+### Summary of preparation required
 
 From a paid developer account or Enterprise account on <https://developer.apple.com>:
 
@@ -26,29 +28,35 @@ From a paid developer account or Enterprise account on <https://developer.apple.
 
 Download and install into `keyChain`.
 
-#### Request a Certificate From a Certificate Authority
+### Request a Certificate From a Certificate Authority
 
 ![create_create_from_ca](.readme/create_create_from_ca.png)
 
-#### Login to developer.apple.com
+### Login to developer.apple.com
 
 ￼![apple_dev_add_cert](.readme/add_cert_apple_dev.png)
 
-#### Create two certificates
+### Create two certificates
 
 ![two_certs_to_create](.readme/two_certs_to_create.png)
 
-#### Sign each Certificate with the Certificate Signing Request
+### Sign each Certificate with the Certificate Signing Request
 
 ![csr_on_apple_dev](.readme/csr_on_apple_dev.png)
 
 ### Login to appleid.apple.com
 
-Request an `app-specific password`.  Copy the value into `KeyChain`.  Create a `New Password Item` in `Keychain` with the following fields:
+Request an `app-specific password`.  
+
+![app_specific_password](.readme/app_specific_password.png)
+
+Copy the value into `KeyChain`.  Create a `New Password Item` in `Keychain` with the following fields:
 
 - `Keychain Item Name` Developer-altool
 - `Account Name` apple developer account email
 - `Password` the new application-specific password
+
+## Ready to Notarize
 
 ### List the code signing certificate from KeyChain
 
