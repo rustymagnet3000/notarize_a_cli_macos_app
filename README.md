@@ -1,9 +1,28 @@
 # Notarize and Package a command-line app on macOS app
 
+> [!WARNING]
+> **Archived:** this guide uses `altool`, which Apple stopped accepting for notarization on 1 November 2023. The signing and packaging steps below still apply. Only the notarization steps changed: use `notarytool` (Xcode 13 or later) instead.
+>
+> ```bash
+> # Once: store your Apple ID, team ID and app-specific password in the keychain.
+> # notarytool asks for the password. This replaces the "Developer-altool" keychain item.
+> xcrun notarytool store-credentials "notary-profile" --apple-id ${APPLE_USERNAME} --team-id ${TEAM_ID}
+>
+> # Submit and wait for the result. This replaces "altool --notarize-app" and "altool --notarization-info".
+> xcrun notarytool submit ${FOO_PKG} --keychain-profile "notary-profile" --wait
+>
+> # If the status is "Invalid", read the log.
+> xcrun notarytool log <submission-id> --keychain-profile "notary-profile"
+>
+> # Staple the ticket, as before.
+> xcrun stapler staple ${FOO_PKG}
+> ```
+>
+> Apple's guide: [TN3147: Migrating to the latest notarization tool](https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool).
+
 ## Why?
 
-Apple [notarize](https://developer.apple.com/documentation/xcode/notarizing_macos_software_before_distribution/:
-):
+Apple [notarize](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution):
 > Beginning in macOS 10.15, all software built after June 1, 2019, and distributed with Developer ID must be notarized.
 
 > Enabling the ‘Hardened Runtime’ will be requirement for successful notarization starting January 2020.
